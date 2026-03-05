@@ -5,20 +5,18 @@ const replicate = new Replicate({
   auth: process.env.REPLICATE_API_TOKEN,
 });
 
-const MODEL_VERSION =
-  "subhash25rawat/flux-vton:a02643ce418c0e12bad371c4adbfaec0dd1cb34b034ef37650ef205f92ad6199";
-
 /**
  * POST /api/generate
  *
- * Creates a flux-vton virtual try-on prediction on Replicate.
- * Returns immediately with the prediction ID — poll GET /api/generate/[id] for status.
+ * Creates a google/nano-banana-2 virtual try-on prediction on Replicate.
+ * Accepts one user photo + up to 13 garment images (files or URLs).
+ * Returns immediately with prediction ID — poll GET /api/generate/[id] for status.
  *
  * Body: multipart/form-data
- *   image    File   (required) — photo of the subject
- *   garment  File   (required if garment_url not provided) — garment image
- *   garment_url  string (required if garment not provided) — product page URL
- *   part     string (optional) — "upper_body" | "lower_body" | "lower_half" | "dresses" (default: "upper_body")
+ *   human_img          File     (required) — photo of the user
+ *   garments[]         File[]   (at least one required, up to 13)
+ *   aspect_ratio       string   (optional, default: "1:1")
+ *   resolution         string   (optional, default: "1K") — "1K" | "2K" | "4K"
  */
 export async function POST(req: NextRequest) {
   if (!process.env.REPLICATE_API_TOKEN) {
@@ -38,37 +36,52 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const imageFile = formData.get("human_img") as File | null;
-  const garmentFile = formData.get("garm_img") as File | null;
-  const garmentUrl = formData.get("clothes_url") as string | null;
-  const part = (formData.get("category") as string | null) ?? "upper_body";
-
-  if (!imageFile) {
+  const humanImg = formData.get("human_img") as File | null;
+  if (!humanImg) {
     return NextResponse.json({ error: "human_img is required" }, { status: 400 });
   }
 
-  if (!garmentFile && !garmentUrl) {
+  // Collect all garment files (sent as garments[] or garments)
+  const garmentEntries = formData.getAll("garments[]").length
+    ? formData.getAll("garments[]")
+    : formData.getAll("garments");
+
+  const garments = garmentEntries.filter(
+    (g): g is File => g instanceof File && g.size > 0
+  );
+
+  if (garments.length === 0) {
     return NextResponse.json(
-      { error: "Either garm_img (file) or clothes_url must be provided" },
+      { error: "At least one garment image is required" },
       { status: 400 }
     );
   }
 
-  const validParts = ["upper_body", "lower_body", "lower_half", "dresses"];
-  if (!validParts.includes(part)) {
+  if (garments.length > 13) {
     return NextResponse.json(
-      { error: `part must be one of: ${validParts.join(", ")}` },
+      { error: "Maximum 13 garment images allowed" },
       { status: 400 }
     );
   }
+
+  const aspectRatio = (formData.get("aspect_ratio") as string | null) ?? "1:1";
+  const resolution = (formData.get("resolution") as string | null) ?? "1K";
+
+  // image_input: user photo first, then garments
+  const imageInput: File[] = [humanImg, ...garments];
 
   try {
     const prediction = await replicate.predictions.create({
-      version: MODEL_VERSION.split(":")[1],
+      model: "google/nano-banana-2",
       input: {
-        image: imageFile,
-        garment: garmentFile ?? garmentUrl,
-        part,
+        prompt:
+          "Put the pieces of clothing on the person in the first image so they can see how the outfit looks. Keep the person's face, skin tone, and body identical. Show the full outfit naturally worn.",
+        image_input: imageInput,
+        aspect_ratio: aspectRatio,
+        resolution,
+        output_format: "jpg",
+        google_search: false,
+        image_search: false,
       },
     });
 
