@@ -1,36 +1,79 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Provador Virtual
 
-## Getting Started
+MVP de provador virtual com IA — envie sua foto e uma peca de roupa para ver como o look ficaria em voce.
 
-First, run the development server:
+## Como rodar
 
 ```bash
+# Instalar dependencias
+npm install
+
+# Rodar em desenvolvimento
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+
+# Build de producao
+npm run build
+npm run start
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Acesse `http://localhost:3000`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Estrutura
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```
+app/
+  page.tsx              # Landing page
+  try/page.tsx          # Interface principal do provador
+  result/[id]/page.tsx  # Pagina de resultado (stub)
+  api/generate/route.ts # Endpoint de geracao (stub)
+components/
+  TryOnInterface.tsx    # Componente principal com toda a logica de upload e estados
+```
 
-## Learn More
+## Stack
 
-To learn more about Next.js, take a look at the following resources:
+- **Next.js 15** (App Router)
+- **TypeScript**
+- **Tailwind CSS v4**
+- **lucide-react** para icones
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Proximos passos (integracao de IA)
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+1. **Replicate IDM-VTON** — modelo open source de virtual try-on
+   - Endpoint: `app/api/generate/route.ts` (ja preparado)
+   - Instalar: `npm install replicate`
 
-## Deploy on Vercel
+2. **Armazenamento de imagens** — Cloudflare R2 ou Vercel Blob
+   - Guardar imagem do usuario, roupa e resultado por `job_id`
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+3. **Pagina de resultado** — `app/result/[id]/page.tsx` (ja criada)
+   - Exibir imagem gerada, botoes de salvar e compartilhar
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+4. **Polling de status** — verificar progresso da geracao em tempo real
+
+### Exemplo de integracao com Replicate
+
+```ts
+// app/api/generate/route.ts
+import Replicate from "replicate";
+
+const replicate = new Replicate({ auth: process.env.REPLICATE_API_TOKEN });
+
+const prediction = await replicate.predictions.create({
+  model: "cuuupid/idm-vton",
+  input: {
+    human_img: userImageUrl,
+    garm_img: clothesImageUrl,
+    garment_des: "roupa",
+  },
+});
+```
+
+## Variaveis de ambiente
+
+Crie um `.env.local`:
+
+```env
+REPLICATE_API_TOKEN=r8_...
+BLOB_READ_WRITE_TOKEN=...   # Vercel Blob (opcional)
+```
