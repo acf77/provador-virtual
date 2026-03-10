@@ -2,6 +2,7 @@
 
 import { useState, useRef, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { useWardrobe } from "@/hooks/useWardrobe";
 import {
   Upload,
   X,
@@ -242,6 +243,7 @@ function LoadingOverlay({ stage, progress }: { stage: Stage; progress: number })
 
 export default function TryOnInterface() {
   const router = useRouter();
+  const wardrobe = useWardrobe();
 
   const [userFile, setUserFile] = useState<File | null>(null);
   const [userPreview, setUserPreview] = useState<string | null>(null);
@@ -260,7 +262,9 @@ export default function TryOnInterface() {
     setUserError(null);
     setUserFile(f);
     setUserPreview(URL.createObjectURL(f));
-  }, []);
+    // Save to wardrobe so /wardrobe page has it ready
+    wardrobe.saveUserPhoto(f);
+  }, [wardrobe]);
 
   const clearUser = useCallback(() => {
     if (userPreview) URL.revokeObjectURL(userPreview);
@@ -277,7 +281,9 @@ export default function TryOnInterface() {
       ...prev,
       { id: crypto.randomUUID(), file: f, preview: URL.createObjectURL(f) },
     ]);
-  }, []);
+    // Auto-save to wardrobe
+    wardrobe.addGarment(f);
+  }, [wardrobe]);
 
   const removeGarment = useCallback((id: string) => {
     setGarments((prev) => {

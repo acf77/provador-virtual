@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Sparkles, ArrowLeft } from "lucide-react";
+import { Sparkles, ArrowLeft, ShirtIcon } from "lucide-react";
 import TryOnInterface from "@/components/TryOnInterface";
 
 export const metadata = {
@@ -25,9 +25,13 @@ export default function TryPage() {
             </div>
             <span className="font-bold text-gray-900">Provador Virtual</span>
           </div>
-          <span className="text-xs text-gray-400 bg-gray-100 px-2 py-1 rounded-full font-medium">
-            Beta
-          </span>
+          <Link
+            href="/wardrobe"
+            className="flex items-center gap-1.5 text-xs font-semibold text-violet-500 hover:text-violet-600 bg-violet-50 hover:bg-violet-100 px-2.5 py-1.5 rounded-full transition-colors"
+          >
+            <ShirtIcon className="w-3.5 h-3.5" />
+            Guarda-roupa
+          </Link>
         </div>
       </header>
 
